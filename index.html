@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Orion Pax — The origin of Optimus Prime</title>
+<meta name="description" content="Orion Pax: a precise, code-capable AI chat console — runs on Google's free Gemini API, $0 cost." />
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- Markdown + code rendering + sanitizing (loaded in the visitor's browser, no build step) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.5/purify.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- Sidebar -->
+  <aside class="rail">
+    <div class="rail-top">
+      <div class="brand">
+        <svg class="spark-core" id="sparkCore" viewBox="0 0 64 64" width="30" height="30">
+          <polygon class="spark-hex" points="32,6 54,18 54,42 32,58 10,42 10,18"/>
+          <rect class="spark-visor" x="16" y="29" width="32" height="6"/>
+          <circle class="spark-dot" cx="32" cy="32" r="3.4"/>
+        </svg>
+        <div class="brand-text">
+          <div class="brand-name">ORION PAX</div>
+          <div class="brand-sub">The origin of Optimus Prime</div>
+        </div>
+      </div>
+      <button class="btn-new" id="newChatBtn" title="New chat">
+        <span>+ New chat</span>
+      </button>
+    </div>
+
+    <nav class="history" id="historyList" aria-label="Conversation history"></nav>
+
+    <div class="rail-bottom">
+      <div class="model-pill" id="modelPill">GEMINI 3.5 FLASH</div>
+      <button class="icon-btn" id="settingsBtn" title="Settings">⚙ Settings</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <header class="topbar">
+      <div class="status">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">Idle</span>
+      </div>
+      <div class="topbar-actions">
+        <button class="icon-btn" id="exportBtn" title="Export conversation as Markdown">⇩ Export</button>
+        <button class="icon-btn" id="clearBtn" title="Clear conversation">⨯ Clear</button>
+      </div>
+    </header>
+
+    <section class="transcript" id="transcript">
+      <div class="empty-state" id="emptyState">
+        <svg viewBox="0 0 64 64" width="56" height="56" class="spark-core spark-core--big">
+          <polygon class="spark-hex" points="32,6 54,18 54,42 32,58 10,42 10,18"/>
+          <rect class="spark-visor" x="16" y="29" width="32" height="6"/>
+          <circle class="spark-dot" cx="32" cy="32" r="3.4"/>
+        </svg>
+        <h1>ORION PAX</h1>
+        <p>Precision reasoning and code — running on Google's free Gemini API, zero cost.</p>
+        <p class="empty-hint">Add your free Gemini API key in <strong>Settings</strong> to begin.</p>
+      </div>
+    </section>
+
+    <form class="composer" id="composerForm">
+      <div class="attachments" id="attachmentsBar"></div>
+      <div class="composer-row">
+        <button type="button" class="icon-btn attach-btn" id="attachBtn" title="Attach a file">📎</button>
+        <input type="file" id="fileInput" multiple hidden />
+        <textarea
+          id="promptInput"
+          placeholder="Ask Orion Pax to write code, edit a file, or explain anything…"
+          rows="1"
+        ></textarea>
+        <button type="submit" class="send-btn" id="sendBtn" title="Send">
+          <span id="sendLabel">SEND</span>
+        </button>
+      </div>
+    </form>
+  </main>
+</div>
+
+<!-- Settings modal -->
+<div class="modal-backdrop" id="settingsBackdrop" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <div class="modal-head">
+      <h2 id="settingsTitle">Settings</h2>
+      <button class="icon-btn" id="closeSettingsBtn" title="Close">⨯</button>
+    </div>
+
+    <div class="modal-body">
+      <label class="field">
+        <span>Google AI (Gemini) API key</span>
+        <input type="password" id="apiKeyInput" placeholder="AIza…" autocomplete="off" />
+        <small>
+          Free, no credit card. Get one at
+          <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>.
+          Stored only in this browser's local storage — sent only to generativelanguage.googleapis.com.
+        </small>
+      </label>
+
+      <label class="field">
+        <span>Model</span>
+        <select id="modelSelect">
+          <option value="gemini-3.5-flash" selected>Gemini 3.5 Flash — recommended, free tier</option>
+          <option value="gemini-2.5-flash">Gemini 2.5 Flash — stable fallback, free tier</option>
+          <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite — fastest, free tier</option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span>Custom model ID (optional — overrides the dropdown)</span>
+        <input type="text" id="customModelInput" placeholder="e.g. gemini-3.7-flash" />
+        <small>Google renames/retires free models every few months. If the dropdown 404s, check the current list in AI Studio and paste the model id here.</small>
+      </label>
+
+      <label class="field">
+        <span>System prompt</span>
+        <textarea id="systemPromptInput" rows="4"></textarea>
+      </label>
+
+      <div class="field-row">
+        <label class="field">
+          <span>Max output tokens</span>
+          <input type="number" id="maxTokensInput" min="256" max="16000" step="256" />
+        </label>
+        <label class="field">
+          <span>Temperature</span>
+          <input type="number" id="temperatureInput" min="0" max="1" step="0.1" />
+        </label>
+      </div>
+
+      <p class="modal-note">
+        Orion Pax calls the Gemini API directly from this page using your own free API key — no server,
+        no cost from this app. Google's free tier is rate-limited (requests/tokens per day) rather than
+        unlimited; if you hit that ceiling, the app will show the error Google returns and you simply
+        wait for the quota to reset or add billing in Google AI Studio.
+      </p>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn-primary" id="saveSettingsBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
